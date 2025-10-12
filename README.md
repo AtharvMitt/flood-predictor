@@ -75,10 +75,14 @@ This system empowers **citizens, planners, and local authorities** with **data-d
    ```bash
    pip install -r requirements.txt
 
-2. python start_backend.py
+2. ```bash
+   python start_backend.py
 
 Open a new terminal instance and follow ahead;
 
 ### Frontend Setup
-1. npm install
-2. npm run dev
+1. ```bash
+   npm install
+   
+2. ```bash 
+   npm run dev
