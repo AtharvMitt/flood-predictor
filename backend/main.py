@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Optional, Dict
 import pandas as pd
+import numpy as np
 import requests
 from datetime import datetime, timedelta
 from scipy.special import expit as sigmoid
@@ -20,8 +21,57 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-CSV_PATH = os.path.join(os.path.dirname(__file__), "..", "src", "bengaluru_flood_with_drainage.csv")
+CSV_PATH = os.path.join(os.path.dirname(__file__), "..", "src", "ward_drainage_analysis.csv")
 OPENWEATHER_API_KEY = "4dac20c17e89610bc98a5475436d99cc"
+
+# Ward name mapping between wardBoundaries.json and ward_drainage_analysis.csv
+WARD_NAME_MAPPING = {
+    # Common exact matches
+    "Benniganahalli": "Benniganahalli",
+    "Byatarayanapura": "Byatarayanapura", 
+    "Domlur": "Domlur",
+    "Gottigere": "Gottigere",
+    "Herohalli": "Herohalli",
+    "Hoysala Nagar": "Hoysala Nagar",
+    "Jogupalya": "Jogupalya",
+    "Kammanahalli": "Kammanahalli",
+    "Kengeri": "Kengeri",
+    "Konena Agrahara": "Konena Agrahara",
+    "Koramangala": "Koramangala",
+    "Kuvempu Nagar": "Kuvempu Nagar",
+    "Marenahalli": "Marenahalli",
+    "Peenya Industrial Area": "Peenya Industrial Area",
+    "Shanthi Nagar": "Shanthi Nagar",
+    "Ulsoor": "Ulsoor",
+    
+    # Additional mappings for similar names
+    "Bagalagunte": "Bagalakunte",
+    "HSR Layout": "HSR Layout",
+    "Garudacharpalya": "Garudacharpalya",
+    "HAL Airport": "HAL Airport",
+    "Anjanapur": "Anjanapur",
+    "Vishwanathnagenahalli": "Vishwanathnagenahalli",
+    "Hoodi": "Hoodi",
+}
+
+def map_ward_name(ward_name):
+    """Map ward name from wardBoundaries.json to ward_drainage_analysis.csv format"""
+    # First try exact match
+    if ward_name in WARD_NAME_MAPPING:
+        return WARD_NAME_MAPPING[ward_name]
+    
+    # Try case-insensitive match
+    for boundary_name, drainage_name in WARD_NAME_MAPPING.items():
+        if boundary_name.lower() == ward_name.lower():
+            return drainage_name
+    
+    # Try partial match
+    for boundary_name, drainage_name in WARD_NAME_MAPPING.items():
+        if ward_name.lower() in boundary_name.lower() or boundary_name.lower() in ward_name.lower():
+            return drainage_name
+    
+    # If no mapping found, return original name
+    return ward_name
 
 class FloodPredictionRequest(BaseModel):
     ward_name: str
@@ -46,19 +96,48 @@ class WardInfo(BaseModel):
     ward_name: str
     latitude: float
     longitude: float
-    flood_count: float
+    area_km2: float
+    drainage_index: float
     vulnerability_score: float
-    drainage_index: Optional[float] = None
 
-def flood_probability(rain_mm, prev_rain_mm, vuln, drainage_features,
-                      intercept=-3.0, alpha=0.10, beta=3.0, gamma=0.05,
-                      delta=-2.5):
-    valid_drainage = [v for v in drainage_features.values() if v is not None]
-    drainage_score = sum(valid_drainage) / len(valid_drainage) if valid_drainage else 0.0
-
-    return float(sigmoid(
-        intercept + alpha * rain_mm + gamma * prev_rain_mm + beta * vuln + delta * drainage_score
-    ))
+def flood_probability(rain_effective, prev_rain_mm, vuln, drainage_index, max_drainage):
+    """
+    Calculate flood probability based on rainfall and drainage capacity.
+    
+    Args:
+        rain_effective: Effective rainfall (mm) - combination of total and peak rainfall
+        prev_rain_mm: Previous day rainfall (mm)
+        vuln: Vulnerability score (0-1, higher = more vulnerable)
+        drainage_index: Drainage capacity index for the ward
+        max_drainage: Maximum drainage index in the dataset for normalization
+    """
+    # Proper normalization: drainage_index / max_drainage gives 0-1 scale
+    # Higher drainage_index = better drainage = lower flood risk
+    normalized_drainage = drainage_index / max_drainage if max_drainage > 0 else 0.0
+    
+    # Base flood risk from rainfall intensity
+    rainfall_risk = 0.0
+    if rain_effective > 0:
+        # Rainfall risk increases with intensity
+        rainfall_risk = 0.3 * (rain_effective ** 0.5)  # Sub-linear growth
+    
+    # Previous day rain adds to risk (saturated ground)
+    saturation_risk = 0.1 * prev_rain_mm if prev_rain_mm > 0 else 0.0
+    
+    # Vulnerability increases risk
+    vulnerability_risk = 0.4 * vuln
+    
+    # Drainage capacity reduces risk (higher normalized_drainage = lower risk)
+    drainage_protection = 0.6 * normalized_drainage
+    
+    # Combine all factors
+    total_risk = rainfall_risk + saturation_risk + vulnerability_risk - drainage_protection
+    
+    # Ensure risk is between 0 and 1
+    total_risk = max(0.0, min(1.0, total_risk))
+    
+    # Use sigmoid function for probability
+    return float(sigmoid(total_risk * 4.0 - 2.0))
 
 def get_openmeteo_rain(lat, lon, date_str):
     target = datetime.strptime(date_str, "%Y-%m-%d").date()
@@ -169,25 +248,48 @@ async def root():
 async def get_wards():
     try:
         df = pd.read_csv(CSV_PATH)
-        df = df.dropna(subset=["Ward Name", "latitude", "longitude", "flood_count"])
+        df = df.dropna(subset=["ward_name", "latitude", "longitude", "drainage_index"])
         
         ward_data = []
-        for ward in df["Ward Name"].unique():
-            ward_df = df[df["Ward Name"] == ward]
-            first_row = ward_df.iloc[0]
-            vuln_score = first_row["flood_count"] / df["flood_count"].max()
+        # Get drainage statistics for proper normalization
+        max_drainage = df["drainage_index"].max()
+        min_drainage = df["drainage_index"].min()
+        
+        # Use percentile-based normalization to handle the wide range better
+        # Calculate percentiles to get a more balanced distribution
+        drainage_values = df["drainage_index"].values
+        p25 = np.percentile(drainage_values, 25)
+        p75 = np.percentile(drainage_values, 75)
+        
+        for _, row in df.iterrows():
+            # Calculate vulnerability score based on drainage index (inverse relationship)
+            # Higher drainage index = lower vulnerability
+            drainage_val = row["drainage_index"]
             
-            drainage_index = None
-            if "drainage_index" in df.columns:
-                drainage_index = float(first_row.get("drainage_index", 0))
+            if max_drainage > min_drainage:
+                # Use percentile-based normalization for better distribution
+                if drainage_val <= p25:
+                    # Bottom quartile: high vulnerability
+                    normalized_drainage = 0.0
+                elif drainage_val >= p75:
+                    # Top quartile: low vulnerability  
+                    normalized_drainage = 1.0
+                else:
+                    # Middle range: linear interpolation
+                    normalized_drainage = (drainage_val - p25) / (p75 - p25)
+                
+                # Vulnerability is inverse of drainage capacity
+                vuln_score = 1.0 - normalized_drainage
+            else:
+                vuln_score = 0.5  # Default if no variation
             
             ward_data.append(WardInfo(
-                ward_name=ward,
-                latitude=float(first_row["latitude"]),
-                longitude=float(first_row["longitude"]),
-                flood_count=float(first_row["flood_count"]),
-                vulnerability_score=float(vuln_score),
-                drainage_index=drainage_index
+                ward_name=row["ward_name"],
+                latitude=float(row["latitude"]),
+                longitude=float(row["longitude"]),
+                area_km2=float(row["area_km2"]),
+                drainage_index=float(row["drainage_index"]),
+                vulnerability_score=float(vuln_score)
             ))
         
         return sorted(ward_data, key=lambda x: x.ward_name)
@@ -198,34 +300,60 @@ async def get_wards():
 async def predict_flood(request: FloodPredictionRequest):
     try:
         df = pd.read_csv(CSV_PATH)
-        df = df.dropna(subset=["latitude", "longitude", "flood_count"])
-        match = df[df["Ward Name"].str.contains(request.ward_name, case=False, na=False)]
+        df = df.dropna(subset=["latitude", "longitude", "drainage_index"])
+        
+        # Map ward name from boundary format to drainage format
+        mapped_ward_name = map_ward_name(request.ward_name)
+        
+        # Try exact match first, then partial match
+        match = df[df["ward_name"].str.lower() == mapped_ward_name.lower()]
+        if match.empty:
+            match = df[df["ward_name"].str.contains(mapped_ward_name, case=False, na=False)]
+        if match.empty:
+            # Try original name as fallback
+            match = df[df["ward_name"].str.contains(request.ward_name, case=False, na=False)]
         
         if match.empty:
             raise HTTPException(status_code=404, detail=f"Ward '{request.ward_name}' not found in dataset")
         
-        lat, lon = match.iloc[0][["latitude", "longitude"]]
-        vuln = match.iloc[0]["flood_count"] / df["flood_count"].max()
+        row = match.iloc[0]
+        lat, lon = row["latitude"], row["longitude"]
+        drainage_index = row["drainage_index"]
         
-        drainage_cols = [
-            "primary_drain_km", "secondary_drain_km",
-            "tertiary_drain_km", "total_drain_km", "drainage_index"
-        ]
-
-        col_map = {c.lower().replace(" ", "_"): c for c in df.columns}
-        drainage_features = {}
-
-        for key in drainage_cols:
-            if key in col_map:
-                col = col_map[key]
-                df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
-                col_min, col_max = df[col].min(), df[col].max()
-                norm_value = 0.0
-                if col_max > col_min:
-                    norm_value = (match.iloc[0][col] - col_min) / (col_max - col_min)
-                drainage_features[key] = norm_value
+        # Calculate vulnerability score based on drainage index (inverse relationship)
+        max_drainage = df["drainage_index"].max()
+        min_drainage = df["drainage_index"].min()
+        
+        # Use percentile-based normalization for better distribution
+        drainage_values = df["drainage_index"].values
+        p25 = np.percentile(drainage_values, 25)
+        p75 = np.percentile(drainage_values, 75)
+        
+        if max_drainage > min_drainage:
+            # Use percentile-based normalization for better distribution
+            if drainage_index <= p25:
+                # Bottom quartile: high vulnerability
+                normalized_drainage = 0.0
+            elif drainage_index >= p75:
+                # Top quartile: low vulnerability  
+                normalized_drainage = 1.0
             else:
-                drainage_features[key] = None
+                # Middle range: linear interpolation
+                normalized_drainage = (drainage_index - p25) / (p75 - p25)
+            
+            # Vulnerability is inverse of drainage capacity
+            vuln = 1.0 - normalized_drainage
+        else:
+            vuln = 0.5  # Default if no variation
+        
+        # Create drainage features for display
+        drainage_features = {
+            "primary_drain_km": row["primary_drain_km"],
+            "secondary_drain_km": row["secondary_drain_km"], 
+            "tertiary_drain_km": row["tertiary_drain_km"],
+            "total_drain_km": row["total_drain_km"],
+            "drainage_index": drainage_index
+        }
         
         try:
             target = datetime.strptime(request.date, "%Y-%m-%d").date()
@@ -286,13 +414,28 @@ async def predict_flood(request: FloodPredictionRequest):
         
         prev_day_rain = get_previous_day_rain(lat, lon, request.date)
         
-        rain_effective = max_hourly_rain * 2 + total_rain * 0.5
+        # Calculate effective rainfall for flood prediction
+        # Peak intensity is more important than total rainfall for flooding
+        rain_effective = max_hourly_rain * 3.0 + total_rain * 0.3
         
         if rain_effective < 0:
             print(f"⚠️ Warning: Negative effective rainfall calculated: {rain_effective}")
             rain_effective = 0.0
         
-        p = flood_probability(rain_effective, prev_day_rain, vuln, drainage_features)
+        # Get max drainage for normalization
+        max_drainage = df["drainage_index"].max()
+        
+        p = flood_probability(rain_effective, prev_day_rain, vuln, drainage_index, max_drainage)
+        
+        # Debug information
+        normalized_drainage = drainage_index / max_drainage if max_drainage > 0 else 0.0
+        print(f"🔍 Prediction Debug for {request.ward_name}:")
+        print(f"   📊 Rain: {total_rain:.1f}mm total, {max_hourly_rain:.1f}mm peak, {rain_effective:.1f}mm effective")
+        print(f"   🌧️ Previous day: {prev_day_rain:.1f}mm")
+        print(f"   🏗️ Drainage index: {drainage_index:.2f} (max: {max_drainage:.2f})")
+        print(f"   🔧 Normalized drainage: {normalized_drainage:.3f} (0-1 scale)")
+        print(f"   ⚠️ Vulnerability: {vuln:.3f} (0-1 scale, higher = more vulnerable)")
+        print(f"   🎯 Flood probability: {p:.3f}")
         
         if p > 0.7:
             risk_level = "HIGH"
@@ -301,8 +444,26 @@ async def predict_flood(request: FloodPredictionRequest):
         else:
             risk_level = "LOW"
         
-        drainage_available = any(v is not None for v in drainage_features.values())
-        drainage_metrics = {k: v for k, v in drainage_features.items() if v is not None} if drainage_available else None
+        drainage_available = True  # All wards have drainage data now
+        # Normalize drainage metrics for display (0-1 scale)
+        drainage_metrics = {}
+        for key, value in drainage_features.items():
+            if key == "drainage_index":
+                # Normalize drainage index to 0-1 scale
+                max_val = df[key].max()
+                min_val = df[key].min()
+                if max_val > min_val:
+                    drainage_metrics[key] = (value - min_val) / (max_val - min_val)
+                else:
+                    drainage_metrics[key] = 0.5
+            else:
+                # For drain lengths, normalize to 0-1 scale
+                max_val = df[key].max()
+                min_val = df[key].min()
+                if max_val > min_val:
+                    drainage_metrics[key] = (value - min_val) / (max_val - min_val)
+                else:
+                    drainage_metrics[key] = 0.0
         
         return FloodPredictionResponse(
             ward_name=request.ward_name,
