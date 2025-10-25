@@ -99,171 +99,260 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white" style={{ backgroundColor: '#111827' }}>
-      <div className="container mx-auto px-4 py-8" style={{ backgroundColor: 'transparent' }}>
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-white mb-2">
-            🌊 Bengaluru Flood Prediction System
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white">
+      <div className="container mx-auto px-4 py-8">
+        {/* Header Section */}
+        <div className="text-center mb-12">
+          <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl mb-6 shadow-2xl">
+            <span className="text-3xl">🌊</span>
+          </div>
+          <h1 className="text-5xl font-bold text-white mb-4 bg-gradient-to-r from-blue-400 to-blue-600 bg-clip-text text-transparent">
+            Bengaluru Flood Prediction
           </h1>
-          <p className="text-gray-300">
-            AI-powered flood risk assessment for Bengaluru wards
+          <p className="text-xl text-slate-300 max-w-2xl mx-auto leading-relaxed">
+            AI-powered flood risk assessment for Bengaluru wards using real-time weather data and drainage analysis
           </p>
         </div>
 
-        <div className="max-w-2xl mx-auto bg-gray-800 rounded-lg shadow-xl p-6 mb-8 border border-gray-700">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                Select Ward
+        {/* Main Input Card */}
+        <div className="max-w-4xl mx-auto bg-white/5 backdrop-blur-xl rounded-3xl shadow-2xl p-8 mb-8 border border-white/10">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+            {/* Ward Selection */}
+            <div className="space-y-4">
+              <label className="block text-lg font-semibold text-white mb-3">
+                📍 Select Ward
               </label>
-              <div className="flex gap-2">
-                <select
-                  value={selectedWard}
-                  onChange={(e) => setSelectedWard(e.target.value)}
-                  className="flex-1 p-3 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white placeholder-gray-400"
-                >
-                  <option value="">Choose a ward...</option>
-                  {wards.map((ward) => (
-                    <option key={ward.ward_name} value={ward.ward_name}>
-                      {ward.ward_name}
-                    </option>
-                  ))}
-                </select>
-                <button
-                  onClick={() => setShowMap(true)}
-                  className="px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors flex items-center gap-2"
-                  title="Open Map"
-                >
-                  🗺️
-                </button>
-              </div>
+              <select
+                value={selectedWard}
+                onChange={(e) => setSelectedWard(e.target.value)}
+                className="w-full p-4 bg-white/10 border border-white/20 rounded-2xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white placeholder-slate-400 backdrop-blur-sm transition-all duration-200 hover:bg-white/15"
+              >
+                <option value="">Choose a ward...</option>
+                {wards.map((ward) => (
+                  <option key={ward.ward_name} value={ward.ward_name}>
+                    {ward.ward_name}
+                  </option>
+                ))}
+              </select>
             </div>
 
-      <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                Select Date
+            {/* Map Button */}
+            <div className="space-y-4">
+              <label className="block text-lg font-semibold text-white mb-3">
+                🗺️ Interactive Map
+              </label>
+              <button
+                onClick={() => setShowMap(true)}
+                className="w-full h-13 py-8 p-4 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-2xl transition-all duration-200 flex items-center justify-center gap-3 shadow-lg hover:shadow-xl transform hover:scale-105"
+                title="Open Interactive Map"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+                </svg>
+                <span>Open Map</span>
+              </button>
+            </div>
+
+            {/* Date Selection */}
+            <div className="space-y-4">
+              <label className="block text-lg font-semibold text-white mb-3">
+                📅 Select Date
               </label>
               <input
                 type="date"
                 value={selectedDate}
                 onChange={(e) => setSelectedDate(e.target.value)}
-                className="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white"
+                className="w-full p-4 bg-white/10 border border-white/20 rounded-2xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white backdrop-blur-sm transition-all duration-200 hover:bg-white/15"
               />
             </div>
-      </div>
+          </div>
 
+          {/* Predict Button */}
           <button
             onClick={handlePredict}
             disabled={loading || !selectedWard || !selectedDate}
-            className="w-full bg-blue-600 text-white py-3 px-6 rounded-lg font-medium hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed transition-colors"
+            className="w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 disabled:from-slate-600 disabled:to-slate-700 text-white py-4 px-8 rounded-2xl font-semibold text-lg transition-all duration-200 disabled:cursor-not-allowed shadow-lg hover:shadow-xl transform hover:scale-[1.02] disabled:transform-none"
           >
-            {loading ? '🔄 Predicting...' : '🔮 Predict Flood Risk'}
-        </button>
+            {loading ? (
+              <div className="flex items-center justify-center gap-3">
+                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                <span>Analyzing...</span>
+              </div>
+            ) : (
+              <div className="flex items-center justify-center gap-3">
+                <span>🔮</span>
+                <span>Predict Flood Risk</span>
+              </div>
+            )}
+          </button>
 
+          {/* Error Messages */}
           {error && error !== 'WEATHER_UNAVAILABLE' && (
-            <div className="mt-4 p-4 bg-red-900 border border-red-600 text-red-200 rounded-lg">
-              <div className="font-semibold mb-2">⚠️ Error</div>
-              <div>{error}</div>
+            <div className="mt-6 p-6 bg-red-500/10 border border-red-500/20 text-red-200 rounded-2xl backdrop-blur-sm">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="w-6 h-6 bg-red-500/20 rounded-full flex items-center justify-center">
+                  <span className="text-red-400">⚠️</span>
+                </div>
+                <div className="font-semibold">Error</div>
+              </div>
+              <div className="text-red-300">{error}</div>
             </div>
           )}
 
           {error === 'WEATHER_UNAVAILABLE' && (
-            <div className="mt-4 p-4 bg-yellow-900 border border-yellow-600 text-yellow-200 rounded-lg">
-              <div className="font-semibold mb-2">🌧️ Weather Forecast Unavailable</div>
-              <div>Weather forecast for the selected date is unavailable. Please try a different date or check back later.</div>
+            <div className="mt-6 p-6 bg-yellow-500/10 border border-yellow-500/20 text-yellow-200 rounded-2xl backdrop-blur-sm">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="w-6 h-6 bg-yellow-500/20 rounded-full flex items-center justify-center">
+                  <span className="text-yellow-400">🌧️</span>
+                </div>
+                <div className="font-semibold">Weather Forecast Unavailable</div>
+              </div>
+              <div className="text-yellow-300">Weather forecast for the selected date is unavailable. Please try a different date or check back later.</div>
             </div>
           )}
         </div>
 
         {prediction && (
-          <div className="max-w-4xl mx-auto">
-            <div className="bg-gray-800 rounded-lg shadow-xl p-6 mb-6 border border-gray-700">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-2xl font-bold text-white">
-                  Flood Risk Assessment
-                </h2>
-                <div className={`px-4 py-2 rounded-full font-semibold border ${getRiskColor(prediction.risk_level)}`}>
-                  {getRiskIcon(prediction.risk_level)} {prediction.risk_level} RISK
+          <div className="max-w-6xl mx-auto">
+            {/* Main Risk Assessment Card */}
+            <div className="bg-white/5 backdrop-blur-xl rounded-3xl shadow-2xl p-8 mb-8 border border-white/10">
+              <div className="flex flex-col lg:flex-row items-center justify-between mb-8 gap-6">
+                <div className="text-center lg:text-left">
+                  <h2 className="text-3xl font-bold text-white mb-2">
+                    Flood Risk Assessment
+                  </h2>
+                  <p className="text-slate-300 text-lg">
+                    Analysis for {prediction.ward_name}
+                  </p>
+                </div>
+                <div className={`px-6 py-3 rounded-2xl font-bold text-lg border-2 ${getRiskColor(prediction.risk_level)} backdrop-blur-sm`}>
+                  <div className="flex items-center gap-2">
+                    <span className="text-2xl">{getRiskIcon(prediction.risk_level)}</span>
+                    <span>{prediction.risk_level} RISK</span>
+                  </div>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="text-center">
-                  <div className="text-4xl font-bold text-blue-400 mb-2">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                {/* Flood Probability */}
+                <div className="text-center bg-white/5 rounded-2xl p-6 backdrop-blur-sm border border-white/10">
+                  <div className="text-5xl font-bold bg-gradient-to-r from-blue-400 to-blue-600 bg-clip-text text-transparent mb-3">
                     {(prediction.flood_probability * 100).toFixed(1)}%
                   </div>
-                  <div className="text-gray-300">Flood Probability</div>
+                  <div className="text-slate-300 text-lg font-medium">Flood Probability</div>
+                  <div className="w-full bg-slate-700 rounded-full h-2 mt-4">
+                    <div 
+                      className="bg-gradient-to-r from-blue-500 to-blue-600 h-2 rounded-full transition-all duration-1000"
+                      style={{ width: `${prediction.flood_probability * 100}%` }}
+                    ></div>
+                  </div>
                 </div>
 
-                <div className="text-center">
-                  <div className="text-2xl font-semibold text-white mb-2">
+                {/* Location Info */}
+                <div className="text-center bg-white/5 rounded-2xl p-6 backdrop-blur-sm border border-white/10">
+                  <div className="text-2xl font-bold text-white mb-3">
                     {prediction.ward_name}
                   </div>
-                  <div className="text-gray-300">
+                  <div className="text-slate-300 text-sm">
                     📍 {prediction.latitude.toFixed(4)}, {prediction.longitude.toFixed(4)}
                   </div>
                 </div>
 
-                <div className="text-center">
-                  <div className="text-2xl font-semibold text-white mb-2">
-                    {new Date(prediction.date).toLocaleDateString()}
+                {/* Assessment Date */}
+                <div className="text-center bg-white/5 rounded-2xl p-6 backdrop-blur-sm border border-white/10">
+                  <div className="text-2xl font-bold text-white mb-3">
+                    {new Date(prediction.date).toLocaleDateString('en-US', { 
+                      weekday: 'long', 
+                      year: 'numeric', 
+                      month: 'long', 
+                      day: 'numeric' 
+                    })}
                   </div>
-                  <div className="text-gray-300">Assessment Date</div>
+                  <div className="text-slate-300 text-sm">Assessment Date</div>
                 </div>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="bg-gray-800 rounded-lg shadow-xl p-6 border border-gray-700">
-                <h3 className="text-xl font-semibold text-white mb-4">
-                  🌧️ Weather Data
-                </h3>
-                <div className="space-y-3">
-                  <div className="flex justify-between">
-                    <span className="text-gray-300">Total Rain (24h):</span>
-                    <span className="font-semibold text-white">{prediction.total_rain_24h.toFixed(1)} mm</span>
+            {/* Weather Data and Risk Factors */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+              {/* Weather Data Card */}
+              <div className="bg-white/5 backdrop-blur-xl rounded-3xl shadow-2xl p-8 border border-white/10">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="w-10 h-10 bg-blue-500/20 rounded-xl flex items-center justify-center">
+                    <span className="text-2xl">🌧️</span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-300">Max Hourly Rain:</span>
-                    <span className="font-semibold text-white">{prediction.max_hourly_rain.toFixed(1)} mm</span>
+                  <h3 className="text-2xl font-bold text-white">Weather Data</h3>
+                </div>
+                <div className="space-y-6">
+                  <div className="flex justify-between items-center py-3 border-b border-white/10">
+                    <span className="text-slate-300 text-lg">Total Rain (24h)</span>
+                    <span className="font-bold text-white text-xl">{prediction.total_rain_24h.toFixed(1)} mm</span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-300">Previous Day Rain:</span>
-                    <span className="font-semibold text-white">{prediction.previous_day_rain.toFixed(1)} mm</span>
+                  <div className="flex justify-between items-center py-3 border-b border-white/10">
+                    <span className="text-slate-300 text-lg">Max Hourly Rain</span>
+                    <span className="font-bold text-white text-xl">{prediction.max_hourly_rain.toFixed(1)} mm</span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-300">Data Source:</span>
-                    <span className="font-semibold text-sm text-blue-400">{prediction.data_source}</span>
+                  <div className="flex justify-between items-center py-3 border-b border-white/10">
+                    <span className="text-slate-300 text-lg">Previous Day Rain</span>
+                    <span className="font-bold text-white text-xl">{prediction.previous_day_rain.toFixed(1)} mm</span>
+                  </div>
+                  <div className="flex justify-between items-center py-3">
+                    <span className="text-slate-300 text-lg">Data Source</span>
+                    <span className="font-semibold text-blue-400 text-sm bg-blue-500/10 px-3 py-1 rounded-full">
+                      {prediction.data_source}
+                    </span>
                   </div>
                 </div>
               </div>
 
-              <div className="bg-gray-800 rounded-lg shadow-xl p-6 border border-gray-700">
-                <h3 className="text-xl font-semibold text-white mb-4">
-                  📊 Risk Factors
-                </h3>
-                <div className="space-y-3">
-                  <div className="flex justify-between">
-                    <span className="text-gray-300">Vulnerability Score:</span>
-                    <span className="font-semibold text-white">{(prediction.vulnerability_score * 100).toFixed(1)}%</span>
+              {/* Risk Factors Card */}
+              <div className="bg-white/5 backdrop-blur-xl rounded-3xl shadow-2xl p-8 border border-white/10">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="w-10 h-10 bg-orange-500/20 rounded-xl flex items-center justify-center">
+                    <span className="text-2xl">📊</span>
                   </div>
+                  <h3 className="text-2xl font-bold text-white">Risk Factors</h3>
+                </div>
+                <div className="space-y-6">
+                  <div className="flex justify-between items-center py-3 border-b border-white/10">
+                    <span className="text-slate-300 text-lg">Vulnerability Score</span>
+                    <div className="flex items-center gap-3">
+                      <div className="w-20 bg-slate-700 rounded-full h-2">
+                        <div 
+                          className="bg-gradient-to-r from-orange-500 to-red-500 h-2 rounded-full transition-all duration-1000"
+                          style={{ width: `${prediction.vulnerability_score * 100}%` }}
+                        ></div>
+                      </div>
+                      <span className="font-bold text-white text-xl">{(prediction.vulnerability_score * 100).toFixed(1)}%</span>
+                    </div>
+                  </div>
+                  
                   {prediction.drainage_available && prediction.drainage_metrics && (
-                    <>
-                      <div className="border-t border-gray-600 pt-3 mt-3">
-                        <div className="text-sm font-medium text-gray-300 mb-2">Drainage Metrics:</div>
+                    <div className="pt-4">
+                      <div className="text-lg font-semibold text-slate-300 mb-4">Drainage Metrics</div>
+                      <div className="space-y-3">
                         {Object.entries(prediction.drainage_metrics).map(([key, value]) => (
-                          <div key={key} className="flex justify-between text-sm">
-                            <span className="text-gray-400 capitalize">
-                              {key.replace(/_/g, ' ')}:
+                          <div key={key} className="flex justify-between items-center">
+                            <span className="text-slate-400 capitalize text-sm">
+                              {key.replace(/_/g, ' ')}
                             </span>
-                            <span className="font-semibold text-white">{(value * 100).toFixed(1)}%</span>
+                            <div className="flex items-center gap-2">
+                              <div className="w-16 bg-slate-700 rounded-full h-1.5">
+                                <div 
+                                  className="bg-gradient-to-r from-green-500 to-blue-500 h-1.5 rounded-full transition-all duration-1000"
+                                  style={{ width: `${value * 100}%` }}
+                                ></div>
+                              </div>
+                              <span className="font-semibold text-white text-sm">{(value * 100).toFixed(1)}%</span>
+                            </div>
                           </div>
                         ))}
                       </div>
-                    </>
+                    </div>
                   )}
+                  
                   {!prediction.drainage_available && (
-                    <div className="text-sm text-gray-400 italic">
+                    <div className="text-center py-4 text-slate-400 italic">
                       ℹ️ Drainage data unavailable
                     </div>
                   )}
@@ -271,33 +360,53 @@ function App() {
               </div>
             </div>
 
-            <div className="mt-6 bg-gray-800 rounded-lg shadow-xl p-6 border border-gray-700">
-              <h3 className="text-xl font-semibold text-white mb-4">
-                📋 Risk Interpretation
-              </h3>
-              <div className="text-gray-300">
+            {/* Risk Interpretation Card */}
+            <div className="bg-white/5 backdrop-blur-xl rounded-3xl shadow-2xl p-8 border border-white/10">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-10 h-10 bg-purple-500/20 rounded-xl flex items-center justify-center">
+                  <span className="text-2xl">📋</span>
+                </div>
+                <h3 className="text-2xl font-bold text-white">Risk Interpretation</h3>
+              </div>
+              
+              <div className="text-slate-300">
                 {prediction.risk_level === 'HIGH' && (
-                  <div className="bg-red-900 border-l-4 border-red-500 p-4 rounded">
-                    <p className="font-semibold text-red-200">High Risk - Immediate Action Required</p>
-                    <p className="text-red-300 mt-2">
+                  <div className="bg-red-500/10 border border-red-500/20 p-6 rounded-2xl backdrop-blur-sm">
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="w-8 h-8 bg-red-500/20 rounded-full flex items-center justify-center">
+                        <span className="text-red-400 text-xl">🔴</span>
+                      </div>
+                      <p className="font-bold text-red-200 text-xl">High Risk - Immediate Action Required</p>
+                    </div>
+                    <p className="text-red-300 text-lg leading-relaxed">
                       There is a high probability of flooding in this area. Please take immediate precautions:
                       avoid low-lying areas, prepare emergency supplies, and stay informed about weather updates.
                     </p>
                   </div>
                 )}
                 {prediction.risk_level === 'MODERATE' && (
-                  <div className="bg-orange-900 border-l-4 border-orange-500 p-4 rounded">
-                    <p className="font-semibold text-orange-200">Moderate Risk - Stay Alert</p>
-                    <p className="text-orange-300 mt-2">
+                  <div className="bg-orange-500/10 border border-orange-500/20 p-6 rounded-2xl backdrop-blur-sm">
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="w-8 h-8 bg-orange-500/20 rounded-full flex items-center justify-center">
+                        <span className="text-orange-400 text-xl">🟠</span>
+                      </div>
+                      <p className="font-bold text-orange-200 text-xl">Moderate Risk - Stay Alert</p>
+                    </div>
+                    <p className="text-orange-300 text-lg leading-relaxed">
                       There is a moderate risk of flooding. Monitor weather conditions closely and be prepared
                       to take action if conditions worsen.
                     </p>
                   </div>
                 )}
                 {prediction.risk_level === 'LOW' && (
-                  <div className="bg-green-900 border-l-4 border-green-500 p-4 rounded">
-                    <p className="font-semibold text-green-200">Low Risk - Normal Conditions</p>
-                    <p className="text-green-300 mt-2">
+                  <div className="bg-green-500/10 border border-green-500/20 p-6 rounded-2xl backdrop-blur-sm">
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="w-8 h-8 bg-green-500/20 rounded-full flex items-center justify-center">
+                        <span className="text-green-400 text-xl">🟢</span>
+                      </div>
+                      <p className="font-bold text-green-200 text-xl">Low Risk - Normal Conditions</p>
+                    </div>
+                    <p className="text-green-300 text-lg leading-relaxed">
                       The flood risk is low for this area and date. Continue normal activities but stay aware
                       of any weather changes.
                     </p>
@@ -308,6 +417,7 @@ function App() {
           </div>
         )}
 
+        {/* Map Modal */}
         <LeafletMapModal
           isOpen={showMap}
           onClose={() => setShowMap(false)}
@@ -316,8 +426,12 @@ function App() {
           selectedWard={selectedWard}
         />
 
-        <div className="text-center mt-12 text-gray-400">
-          <p>Bengaluru Flood Prediction System v4.3 — Powered by AI & Weather Data</p>
+        {/* Footer */}
+        <div className="text-center mt-16 text-slate-400">
+          <div className="inline-flex items-center gap-2 bg-white/5 backdrop-blur-sm px-6 py-3 rounded-full border border-white/10">
+            <span className="text-lg">🌊</span>
+            <p className="text-sm font-medium">Bengaluru Flood Prediction System v4.3 — Powered by AI & Weather Data</p>
+          </div>
         </div>
       </div>
     </div>

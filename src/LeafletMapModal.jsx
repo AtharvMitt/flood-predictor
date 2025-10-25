@@ -108,31 +108,38 @@ const LeafletMapModal = ({ isOpen, onClose, wards, onWardSelect, selectedWard })
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-gray-800 rounded-lg shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-hidden border border-gray-700">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-white/5 backdrop-blur-xl rounded-3xl shadow-2xl max-w-7xl w-full max-h-[95vh] overflow-hidden border border-white/10">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-gray-700">
-          <h3 className="text-xl font-semibold text-white">🗺️ Select Ward on Map</h3>
+        <div className="flex items-center justify-between p-6 border-b border-white/10">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-blue-500/20 rounded-xl flex items-center justify-center">
+              <span className="text-2xl">🗺️</span>
+            </div>
+            <h3 className="text-2xl font-bold text-white">Select Ward on Map</h3>
+          </div>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-white text-2xl transition-colors"
+            className="w-10 h-10 bg-white/10 hover:bg-white/20 rounded-xl flex items-center justify-center text-white text-xl transition-all duration-200 hover:scale-105"
           >
             ×
           </button>
         </div>
 
         {/* Map Content */}
-        <div className="p-4">
+        <div className="p-6">
           {!mapLoaded ? (
-            <div className="bg-gray-700 rounded-lg p-8 text-center text-gray-300">
-              <div className="animate-spin text-4xl mb-4">🗺️</div>
-              <h4 className="text-xl font-semibold mb-2">Loading Map...</h4>
-              <p>Preparing interactive map of Bangalore wards</p>
+            <div className="bg-white/5 backdrop-blur-sm rounded-2xl p-12 text-center text-slate-300 border border-white/10">
+              <div className="w-16 h-16 bg-blue-500/20 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                <div className="animate-spin text-3xl">🗺️</div>
+              </div>
+              <h4 className="text-2xl font-bold text-white mb-3">Loading Interactive Map</h4>
+              <p className="text-lg">Preparing detailed map of Bangalore wards...</p>
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-6">
               {/* Map Container */}
-              <div className="relative bg-gray-700 rounded-lg overflow-hidden" style={{ height: '500px' }}>
+              <div className="relative bg-slate-800 rounded-2xl overflow-hidden border border-white/10" style={{ height: '600px' }}>
                 <MapContainer
                   center={getMapCenter()}
                   zoom={12}
@@ -153,51 +160,35 @@ const LeafletMapModal = ({ isOpen, onClose, wards, onWardSelect, selectedWard })
                 </MapContainer>
 
                 {/* Map Legend */}
-                <div className="absolute top-4 left-4 bg-gray-800 bg-opacity-90 text-white p-3 rounded-lg border border-gray-600 z-10">
-                  <h4 className="font-semibold text-sm mb-2">Legend</h4>
-                  <div className="space-y-1 text-xs">
-                    <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 rounded" style={{ backgroundColor: '#6b7280' }}></div>
+                <div className="absolute top-6 left-6 bg-white/10 backdrop-blur-xl text-white p-4 rounded-2xl border border-white/20 z-10">
+                  <h4 className="font-bold text-sm mb-3 flex items-center gap-2">
+                    <span>📊</span>
+                    Legend
+                  </h4>
+                  <div className="space-y-2 text-xs">
+                    <div className="flex items-center gap-3">
+                      <div className="w-4 h-4 rounded" style={{ backgroundColor: '#6b7280' }}></div>
                       <span>Ward Boundary</span>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 rounded" style={{ backgroundColor: '#3b82f6' }}></div>
+                    <div className="flex items-center gap-3">
+                      <div className="w-4 h-4 rounded" style={{ backgroundColor: '#3b82f6' }}></div>
                       <span>Selected Ward</span>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 rounded" style={{ backgroundColor: '#60a5fa' }}></div>
+                    <div className="flex items-center gap-3">
+                      <div className="w-4 h-4 rounded" style={{ backgroundColor: '#60a5fa' }}></div>
                       <span>Hovered Ward</span>
                     </div>
                   </div>
                 </div>
 
                 {/* Instructions */}
-                <div className="absolute bottom-4 left-4 right-4 bg-gray-800 bg-opacity-90 text-white p-3 rounded-lg border border-gray-600 z-10">
-                  <p className="text-sm text-center">
-                    Click on any ward boundary to select it, or use the list below
+                <div className="absolute bottom-6 left-6 right-6 bg-white/10 backdrop-blur-xl text-white p-4 rounded-2xl border border-white/20 z-10">
+                  <p className="text-sm text-center font-medium">
+                    🖱️ Click on any ward boundary to select it
                   </p>
                 </div>
               </div>
 
-              {/* Ward List */}
-              <div className="bg-gray-700 rounded-lg p-4">
-                <h4 className="text-white font-semibold mb-3">All Wards ({wards.length})</h4>
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 max-h-40 overflow-y-auto dark-scrollbar">
-                  {wards.map((ward) => (
-                    <button
-                      key={ward.ward_name}
-                      onClick={() => onWardSelect(ward.ward_name)}
-                      className={`text-left p-2 rounded text-sm transition-colors ${
-                        selectedWard === ward.ward_name
-                          ? 'bg-blue-600 text-white'
-                          : 'bg-gray-600 text-gray-300 hover:bg-gray-500'
-                      }`}
-                    >
-                      {ward.ward_name}
-                    </button>
-                  ))}
-                </div>
-              </div>
             </div>
           )}
         </div>
