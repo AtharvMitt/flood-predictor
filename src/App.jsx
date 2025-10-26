@@ -210,7 +210,7 @@ function App() {
             FlowCast
           </h1>
           <p className="text-xl text-slate-300 max-w-2xl mx-auto leading-relaxed">
-            AI-powered water-logging risk assessment for Bengaluru wards using real-time weather data and drainage analysis
+            Water-logging risk assessment for Bengaluru wards using real-time weather data and drainage analysis
           </p>
         </div>
 
@@ -534,7 +534,7 @@ function App() {
         <div className="text-center mt-16 text-slate-400">
           <div className="inline-flex items-center gap-2 bg-white/5 backdrop-blur-sm px-6 py-3 rounded-full border border-white/10">
             <span className="text-lg">🌊</span>
-            <p className="text-sm font-medium">Bengaluru Flood Prediction System v4.3 — Powered by AI & Weather Data</p>
+            <p className="text-sm font-medium">Powered by Team Diamonds</p>
           </div>
         </div>
       </div>
