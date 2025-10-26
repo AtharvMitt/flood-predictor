@@ -194,10 +194,10 @@ function App() {
             <span className="text-3xl">🌊</span>
           </div>
           <h1 className="text-5xl font-bold text-white mb-4 bg-gradient-to-r from-blue-400 to-blue-600 bg-clip-text text-transparent">
-            Bengaluru Flood Prediction
+            FlowCast
           </h1>
           <p className="text-xl text-slate-300 max-w-2xl mx-auto leading-relaxed">
-            AI-powered flood risk assessment for Bengaluru wards using real-time weather data and drainage analysis
+            AI-powered water-logging risk assessment for Bengaluru wards using real-time weather data and drainage analysis
           </p>
         </div>
 
