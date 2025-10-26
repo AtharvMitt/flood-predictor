@@ -11,7 +11,7 @@ L.Icon.Default.mergeOptions({
   shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
 })
 
-const LeafletMapModal = ({ isOpen, onClose, wards, onWardSelect, selectedWard }) => {
+const LeafletMapModal = ({ isOpen, onClose, wards, onWardSelect, selectedWard, wardProbabilities, mapLoading }) => {
   const [mapLoaded, setMapLoaded] = useState(false)
   const [hoveredWard, setHoveredWard] = useState(null)
   const mapRef = useRef(null)
@@ -31,22 +31,56 @@ const LeafletMapModal = ({ isOpen, onClose, wards, onWardSelect, selectedWard })
     return [avgLat, avgLon]
   }
 
+  const getFloodColor = (probability) => {
+    if (probability === undefined || probability === null) return '#6b7280' // Default gray
+    
+    // Convert probability (0-1) to color gradient: green (low) -> yellow -> red (high)
+    const hue = (1 - probability) * 120 // 120 = green, 0 = red
+    return `hsl(${hue}, 70%, 50%)`
+  }
+
   const getWardStyle = (feature) => {
     const wardName = feature.properties.ward_name
     const isSelected = selectedWard === wardName
     const isHovered = hoveredWard === wardName
+    
+    // Try to find ward data with fuzzy matching
+    let wardData = wardProbabilities[wardName]
+    if (!wardData) {
+      // Try case-insensitive match
+      const lowerWardName = wardName.toLowerCase()
+      wardData = Object.values(wardProbabilities).find(ward => 
+        ward.ward_name.toLowerCase() === lowerWardName
+      )
+    }
+    
+    // If still no match, try partial matching
+    if (!wardData) {
+      const lowerWardName = wardName.toLowerCase()
+      wardData = Object.values(wardProbabilities).find(ward => 
+        ward.ward_name.toLowerCase().includes(lowerWardName) || 
+        lowerWardName.includes(ward.ward_name.toLowerCase())
+      )
+    }
+    
+    let fillColor = '#6b7280' // Default gray
+    
+    if (wardData && wardData.flood_probability !== undefined) {
+      fillColor = getFloodColor(wardData.flood_probability)
+    }
 
     return {
-      fillColor: isSelected ? '#3b82f6' : isHovered ? '#60a5fa' : '#6b7280',
+      fillColor: isSelected ? '#3b82f6' : isHovered ? '#60a5fa' : fillColor,
       weight: isSelected ? 3 : 2,
       opacity: isSelected ? 1 : 0.8,
       color: isSelected ? '#1d4ed8' : isHovered ? '#2563eb' : '#4b5563',
-      fillOpacity: isSelected ? 0.6 : isHovered ? 0.4 : 0.2,
+      fillOpacity: isSelected ? 0.8 : isHovered ? 0.6 : 0.7,
     }
   }
 
   const handleWardClick = (feature) => {
     const wardName = feature.properties.ward_name
+    console.log('Ward clicked:', wardName)
     onWardSelect(wardName)
     onClose()
   }
@@ -62,14 +96,30 @@ const LeafletMapModal = ({ isOpen, onClose, wards, onWardSelect, selectedWard })
   const onEachFeature = (feature, layer) => {
     const wardName = feature.properties.ward_name
     const area = feature.properties.area_km2
+    const wardData = wardProbabilities[wardName]
+    
+    let probabilityText = 'Loading...'
+    let riskLevel = ''
+    let riskColor = '#6b7280'
+    
+    if (wardData) {
+      probabilityText = `${(wardData.flood_probability * 100).toFixed(1)}%`
+      riskLevel = wardData.risk_level
+      riskColor = getFloodColor(wardData.flood_probability)
+    }
 
     layer.bindPopup(`
-      <div class="text-center">
-        <h3 class="font-semibold text-gray-800">${wardName}</h3>
-        <p class="text-sm text-gray-600">Area: ${area} km²</p>
+      <div class="text-center p-2">
+        <h3 class="font-semibold text-gray-800 mb-2">${wardName}</h3>
+        <div class="mb-2">
+          <div class="text-sm text-gray-600 mb-1">Flood Probability:</div>
+          <div class="text-lg font-bold" style="color: ${riskColor}">${probabilityText}</div>
+          ${riskLevel ? `<div class="text-xs text-gray-500">${riskLevel} Risk</div>` : ''}
+        </div>
+        <p class="text-xs text-gray-500 mb-2">Area: ${area} km²</p>
         <button 
           onclick="window.selectWard('${wardName}')"
-          class="mt-2 px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700"
+          class="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 transition-colors"
         >
           Select Ward
         </button>
@@ -163,29 +213,42 @@ const LeafletMapModal = ({ isOpen, onClose, wards, onWardSelect, selectedWard })
                 <div className="absolute top-6 left-6 bg-white/10 backdrop-blur-xl text-white p-4 rounded-2xl border border-white/20 z-10">
                   <h4 className="font-bold text-sm mb-3 flex items-center gap-2">
                     <span>📊</span>
-                    Legend
+                    Flood Risk Legend
                   </h4>
                   <div className="space-y-2 text-xs">
                     <div className="flex items-center gap-3">
-                      <div className="w-4 h-4 rounded" style={{ backgroundColor: '#6b7280' }}></div>
-                      <span>Ward Boundary</span>
+                      <div className="w-4 h-4 rounded" style={{ backgroundColor: getFloodColor(0) }}></div>
+                      <span>Low Risk (0-40%)</span>
                     </div>
                     <div className="flex items-center gap-3">
-                      <div className="w-4 h-4 rounded" style={{ backgroundColor: '#3b82f6' }}></div>
-                      <span>Selected Ward</span>
+                      <div className="w-4 h-4 rounded" style={{ backgroundColor: getFloodColor(0.5) }}></div>
+                      <span>Moderate Risk (40-70%)</span>
                     </div>
                     <div className="flex items-center gap-3">
-                      <div className="w-4 h-4 rounded" style={{ backgroundColor: '#60a5fa' }}></div>
-                      <span>Hovered Ward</span>
+                      <div className="w-4 h-4 rounded" style={{ backgroundColor: getFloodColor(1) }}></div>
+                      <span>High Risk (70-100%)</span>
+                    </div>
+                    <div className="border-t border-white/20 pt-2 mt-2">
+                      <div className="flex items-center gap-3">
+                        <div className="w-4 h-4 rounded" style={{ backgroundColor: '#3b82f6' }}></div>
+                        <span>Selected Ward</span>
+                      </div>
                     </div>
                   </div>
                 </div>
 
                 {/* Instructions */}
                 <div className="absolute bottom-6 left-6 right-6 bg-white/10 backdrop-blur-xl text-white p-4 rounded-2xl border border-white/20 z-10">
-                  <p className="text-sm text-center font-medium">
-                    🖱️ Click on any ward boundary to select it
-                  </p>
+                  {mapLoading ? (
+                    <div className="flex items-center justify-center gap-2">
+                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                      <p className="text-sm font-medium">Loading flood risk data...</p>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-center font-medium">
+                      🖱️ Click on any ward boundary to select it
+                    </p>
+                  )}
                 </div>
               </div>
 

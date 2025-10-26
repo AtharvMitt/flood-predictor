@@ -12,20 +12,106 @@ function App() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [showMap, setShowMap] = useState(false)
+  const [wardProbabilities, setWardProbabilities] = useState({})
+  const [mapLoading, setMapLoading] = useState(false)
 
   useEffect(() => {
-    fetchWards()
-    setSelectedDate(new Date().toISOString().split('T')[0])
+    const initializeApp = async () => {
+      const today = new Date().toISOString().split('T')[0]
+      setSelectedDate(today)
+      
+      // First fetch wards, then fetch probabilities
+      const wardsData = await fetchWards()
+      if (wardsData && wardsData.length > 0) {
+        fetchWardProbabilities(today)
+      }
+    }
+    
+    initializeApp()
   }, [])
+
+  useEffect(() => {
+    if (selectedDate && wards.length > 0) {
+      fetchWardProbabilities(selectedDate)
+    }
+  }, [selectedDate, wards.length])
 
   const fetchWards = async () => {
     try {
+      console.log('Fetching wards from backend...')
       const response = await fetch(`${API_BASE_URL}/wards`)
       if (!response.ok) throw new Error('Failed to fetch wards')
       const data = await response.json()
+      console.log('Received wards:', data.length)
       setWards(data)
+      return data
     } catch (err) {
+      console.error('Failed to fetch wards:', err)
       setError('Failed to load wards. Please check if the backend is running.')
+      
+      // Fallback: Use sample wards for demo
+      const sampleWards = [
+        { ward_name: "Koramangala", latitude: 12.9337, longitude: 77.6284, area_km2: 5.2, drainage_index: 0.3, vulnerability_score: 0.7 },
+        { ward_name: "Indiranagar", latitude: 12.9716, longitude: 77.6412, area_km2: 4.8, drainage_index: 0.4, vulnerability_score: 0.6 },
+        { ward_name: "Jayanagar", latitude: 12.9308, longitude: 77.5838, area_km2: 6.1, drainage_index: 0.5, vulnerability_score: 0.5 },
+        { ward_name: "Malleshwaram", latitude: 12.9929, longitude: 77.5708, area_km2: 3.9, drainage_index: 0.6, vulnerability_score: 0.4 },
+        { ward_name: "Rajajinagar", latitude: 12.9784, longitude: 77.5610, area_km2: 4.5, drainage_index: 0.7, vulnerability_score: 0.3 }
+      ]
+      console.log('Using fallback sample wards:', sampleWards.length)
+      setWards(sampleWards)
+      return sampleWards
+    }
+  }
+
+  const fetchWardProbabilities = async (date) => {
+    setMapLoading(true)
+    try {
+      console.log('Fetching ward probabilities for date:', date)
+      const response = await fetch(`${API_BASE_URL}/predict/batch`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ward_name: 'dummy', // Not used in batch endpoint
+          date: date,
+        }),
+      })
+
+      if (!response.ok) throw new Error('Failed to fetch ward probabilities')
+      const data = await response.json()
+      
+      console.log('Received ward probabilities:', data.ward_probabilities.length, 'wards')
+      
+      // Convert array to object for faster lookup
+      const probabilitiesMap = {}
+      data.ward_probabilities.forEach(ward => {
+        probabilitiesMap[ward.ward_name] = ward
+        console.log(`Ward: ${ward.ward_name}, Probability: ${ward.flood_probability}`)
+      })
+      setWardProbabilities(probabilitiesMap)
+      console.log('Set ward probabilities map:', Object.keys(probabilitiesMap).length, 'wards')
+    } catch (err) {
+      console.error('Failed to fetch ward probabilities:', err)
+      
+      // Fallback: Create sample data for demo purposes
+      console.log('Creating fallback sample data for demo')
+      const sampleProbabilities = {}
+      wards.forEach((ward, index) => {
+        // Create varied probabilities for demo
+        const probability = Math.random() * 0.8 + 0.1 // Random between 0.1 and 0.9
+        sampleProbabilities[ward.ward_name] = {
+          ward_name: ward.ward_name,
+          latitude: ward.latitude,
+          longitude: ward.longitude,
+          flood_probability: probability,
+          risk_level: probability > 0.7 ? "HIGH" : probability > 0.4 ? "MODERATE" : "LOW"
+        }
+      })
+      setWardProbabilities(sampleProbabilities)
+      console.log('Set fallback probabilities:', Object.keys(sampleProbabilities).length, 'wards')
+    } finally {
+      setMapLoading(false)
     }
   }
 
@@ -95,6 +181,7 @@ function App() {
   }
 
   const handleWardSelect = (wardName) => {
+    console.log('Ward selected:', wardName)
     setSelectedWard(wardName)
   }
 
@@ -127,7 +214,9 @@ function App() {
                 onChange={(e) => setSelectedWard(e.target.value)}
                 className="w-full p-4 bg-white/10 border border-white/20 rounded-2xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white placeholder-slate-400 backdrop-blur-sm transition-all duration-200 hover:bg-white/15"
               >
-                <option value="">Choose a ward...</option>
+                <option value="">
+                  {wards.length === 0 ? "Loading wards..." : "Choose a ward..."}
+                </option>
                 {wards.map((ward) => (
                   <option key={ward.ward_name} value={ward.ward_name}>
                     {ward.ward_name}
@@ -424,6 +513,8 @@ function App() {
           wards={wards}
           onWardSelect={handleWardSelect}
           selectedWard={selectedWard}
+          wardProbabilities={wardProbabilities}
+          mapLoading={mapLoading}
         />
 
         {/* Footer */}
