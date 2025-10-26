@@ -394,10 +394,6 @@ function App() {
                     <span className="text-slate-300 text-lg">Max Hourly Rain</span>
                     <span className="font-bold text-white text-xl">{prediction.max_hourly_rain.toFixed(1)} mm</span>
                   </div>
-                  <div className="flex justify-between items-center py-3 border-b border-white/10">
-                    <span className="text-slate-300 text-lg">Previous Day Rain</span>
-                    <span className="font-bold text-white text-xl">{prediction.previous_day_rain.toFixed(1)} mm</span>
-                  </div>
                   <div className="flex justify-between items-center py-3">
                     <span className="text-slate-300 text-lg">Data Source</span>
                     <span className="font-semibold text-blue-400 text-sm bg-blue-500/10 px-3 py-1 rounded-full">
