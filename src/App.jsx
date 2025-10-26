@@ -14,6 +14,7 @@ function App() {
   const [showMap, setShowMap] = useState(false)
   const [wardProbabilities, setWardProbabilities] = useState({})
   const [mapLoading, setMapLoading] = useState(false)
+  const [wardsLoading, setWardsLoading] = useState(true)
 
   useEffect(() => {
     const initializeApp = async () => {
@@ -38,12 +39,21 @@ function App() {
 
   const fetchWards = async () => {
     try {
+      setWardsLoading(true)
       console.log('Fetching wards from backend...')
-      const response = await fetch(`${API_BASE_URL}/wards`)
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 5000) // 5 second timeout
+      
+      const response = await fetch(`${API_BASE_URL}/wards`, {
+        signal: controller.signal
+      })
+      clearTimeout(timeoutId)
+      
       if (!response.ok) throw new Error('Failed to fetch wards')
       const data = await response.json()
       console.log('Received wards:', data.length)
       setWards(data)
+      setWardsLoading(false)
       return data
     } catch (err) {
       console.error('Failed to fetch wards:', err)
@@ -59,7 +69,10 @@ function App() {
       ]
       console.log('Using fallback sample wards:', sampleWards.length)
       setWards(sampleWards)
+      setWardsLoading(false)
       return sampleWards
+    } finally {
+      setWardsLoading(false)
     }
   }
 
@@ -215,7 +228,7 @@ function App() {
                 className="w-full p-4 bg-white/10 border border-white/20 rounded-2xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white placeholder-slate-400 backdrop-blur-sm transition-all duration-200 hover:bg-white/15"
               >
                 <option value="">
-                  {wards.length === 0 ? "Loading wards..." : "Choose a ward..."}
+                  {wardsLoading ? "Loading wards..." : wards.length === 0 ? "No wards available" : "Choose a ward..."}
                 </option>
                 {wards.map((ward) => (
                   <option key={ward.ward_name} value={ward.ward_name}>
